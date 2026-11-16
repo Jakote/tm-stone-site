@@ -87,7 +87,7 @@
           <option value="per_m2">Lay it — the rate card</option>
         </select></div>
       <div><label>Rate (M per m²)</label><input type="number" id="irate" value="90" min="0" step="5"></div>
-      <div><label>TLB hours (excavation, at cost)</label><input type="number" id="itlb" value="0" min="0" step="0.5"></div>
+      <div><label>TLB hours (excavation)</label><input type="number" id="itlb" value="0" min="0" step="0.5"></div>
       <div><label>Override whole charge (M)</label><input type="text" inputmode="decimal" id="ioverride" placeholder="leave blank to use the rate" step="0.01"></div>
     </div>
     <div class="g4" style="margin-bottom:14px">
@@ -483,7 +483,7 @@
       <div></div>
     </div>
     <p class="mini" style="margin-top:11px">The rate covers levelling, bedding sand, paving and finishes. Excavation is not in
-      it — TLB is charged by the hour at what it costs. Change any rate here and the banner above the
+      it — TLB is charged by the hour. Change any rate here and the banner above the
       installation table will say the figures are no longer the rate card as given.</p>
     <div style="margin-top:14px;display:flex;gap:9px;align-items:center;flex-wrap:wrap">
       <button class="btn" onclick="saveInstall()">Save rate card</button>
@@ -525,15 +525,20 @@ const PRODUCTS = [ {
   litres: .5,
   face: window.TMS_FACE_M2.SQ100
 }, {
-  code: "BR220",
-  name: "220 × 110 × 50 mm Brick",
-  litres: 1.21,
-  face: window.TMS_FACE_M2.BR220
+  code: "INT200",
+  name: "200 × 100 × 50 mm Interlocking",
+  litres: 1,
+  face: window.TMS_FACE_M2.INT200
 }, {
   code: "HEX240",
   name: "Hexagon 240 × 210 × 50 mm",
   litres: 1.965,
   face: window.TMS_FACE_M2.HEX240
+}, {
+  code: "ARW3D",
+  name: "3D Arrow",
+  litres: 1.5625,
+  face: window.TMS_FACE_M2.ARW3D
 } ];
 
 const SHOW_INTERNAL_COSTS = false;
@@ -548,6 +553,16 @@ const M = n => "M" + Number(n).toLocaleString("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 });
+
+const ESC = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+};
+
+const esc = v => String(v == null ? "" : v).replace(/[&<>"']/g, (ch => ESC[ch]));
 
 const store = {
   get(k, fallback) {
@@ -687,7 +702,7 @@ function renderLines() {
     cost += u * c.cost;
     units += u;
     area += l.area;
-    return `<tr><td><b>${l.desc}</b><div class="mini">${prod.name}</div></td>\n      <td class="num">${l.area.toFixed(1)}</td>\n      <td class="num">${u.toLocaleString("en-US")}</td>\n      <td class="num">${M(c.price)}</td>\n      <td class="num"><b>${M(lt)}</b></td>\n      <td class="noprint"><button class="btn dgr sm" onclick="delLine(${i})">Remove</button></td></tr>`;
+    return `<tr><td><b>${esc(l.desc)}</b><div class="mini">${prod.name}</div></td>\n      <td class="num">${l.area.toFixed(1)}</td>\n      <td class="num">${u.toLocaleString("en-US")}</td>\n      <td class="num">${M(c.price)}</td>\n      <td class="num"><b>${M(lt)}</b></td>\n      <td class="noprint"><button class="btn dgr sm" onclick="delLine(${i})">Remove</button></td></tr>`;
   })).join("");
   const ins = typeof currentInstall === "function" ? currentInstall() : {
     charge: 0,
@@ -791,7 +806,7 @@ function renderSaved() {
     sw.innerHTML = "";
     return;
   }
-  tb.innerHTML = quotes.map(((q, i) => `<tr>\n      <td><b>${q.quote_no}</b></td>\n      <td>${q.customer}<div class="mini">${q.site || ""}</div></td>\n      <td class="num"><b>${M(q.total)}</b></td>\n      <td>${new Date(q.created).toLocaleDateString("en-ZA")}</td>\n      <td><span class="pill p-${q.status}">${q.status}</span></td>\n      <td class="internal"></td>\n      <td class="noprint" style="white-space:nowrap">\n        ${q.status === "draft" ? `<button class="btn sm" onclick="setStatus(${i},'sent')">Mark sent</button> ` : ""}\n        ${q.status === "sent" ? `<button class="btn sm" onclick="setStatus(${i},'accepted')">Accepted</button> ` : ""}\n        <button class="btn sm" onclick="printSavedQuote(${i})">Print</button>\n        <button class="btn dgr sm" onclick="delQuote(${i})">Delete</button>\n      </td></tr>`)).join("");
+  tb.innerHTML = quotes.map(((q, i) => `<tr>\n      <td><b>${esc(q.quote_no)}</b></td>\n      <td>${esc(q.customer)}<div class="mini">${esc(q.site)}</div></td>\n      <td class="num"><b>${M(q.total)}</b></td>\n      <td>${new Date(q.created).toLocaleDateString("en-ZA")}</td>\n      <td><span class="pill p-${esc(q.status)}">${esc(q.status)}</span></td>\n      <td class="internal"></td>\n      <td class="noprint" style="white-space:nowrap">\n        ${q.status === "draft" ? `<button class="btn sm" onclick="setStatus(${i},'sent')">Mark sent</button> ` : ""}\n        ${q.status === "sent" ? `<button class="btn sm" onclick="setStatus(${i},'accepted')">Accepted</button> ` : ""}\n        <button class="btn sm" onclick="printSavedQuote(${i})">Print</button>\n        <button class="btn dgr sm" onclick="delQuote(${i})">Delete</button>\n      </td></tr>`)).join("");
   sw.innerHTML = "";
 }
 
@@ -807,7 +822,7 @@ function renderMaterials() {
   if (!el) return;
   el.innerHTML = MATERIAL_CODES.map((k => {
     const have = materials[k] != null && materials[k] !== "";
-    return `<div class="mat">\n      <div><b>${MATNAMES[k][0]}</b><div class="mini">per ${MATNAMES[k][1]}</div></div>\n      <div><label>What you pay (M)</label><input type="text" inputmode="decimal" id="m_${k}" value="${have ? materials[k] : ""}" placeholder="not entered" oninput="livePrice()"></div>\n      <div class="mini" style="padding-bottom:10px">Kept on this device only. Used to value stock; your selling prices do not change.</div>\n      <div></div>\n    </div>`;
+    return `<div class="mat">\n      <div><b>${MATNAMES[k][0]}</b><div class="mini">per ${MATNAMES[k][1]}</div></div>\n      <div><label>What you pay (M)</label><input type="text" inputmode="decimal" id="m_${k}" value="${have ? esc(materials[k]) : ""}" placeholder="not entered" oninput="livePrice()"></div>\n      <div class="mini" style="padding-bottom:10px">Kept on this device only. Used to value stock; your selling prices do not change.</div>\n      <div></div>\n    </div>`;
   })).join("");
 }
 
@@ -915,7 +930,7 @@ function renderInstall() {
   const _c = typeof currentCrew === "function" ? currentCrew() : null;
   if ($("groundNote") && _g && _c) {
     const eff = (_c.speed || 45) * (_g.speed || 1);
-    $("groundNote").innerHTML = `<b>${_c.name}</b> (${_c.size} people) on <b>${_g.name.split(" — ")[0]}</b> ground lays about <b>${eff.toFixed(0)} m² a day</b> — ${_g.why}`;
+    $("groundNote").innerHTML = `<b>${esc(_c.name)}</b> (${esc(_c.size)} people) on <b>${esc(String(_g.name).split(" — ")[0])}</b> ground lays about <b>${eff.toFixed(0)} m² a day</b> — ${esc(_g.why)}`;
   }
   const onCard = install.confirmed && installIsRateCard();
   $("rateWarn").innerHTML = onCard ? "" : `<div class="alert a-warn"><b>These are not TM Stone's rate card.</b><br>\n       The card he gave on 14 October 2026 is <b>M${INSTALL_DEFAULTS.rate}/m²</b> all-in for levelling,\n       bedding sand, paving and finishes, moving between <b>M${INSTALL_DEFAULTS.min}</b> and\n       <b>M${INSTALL_DEFAULTS.max}</b> with the terrain, with excavation charged separately at\n       <b>M${INSTALL_DEFAULTS.tlb}/hour</b> of TLB and <b>M${INSTALL_DEFAULTS.trip}</b> a trip.\n       This page is currently set to <b>${M(install.rate)}/m²</b> (${M(install.min)}–${M(install.max)}),\n       TLB <b>${M(install.tlb)}/hour</b>, trip <b>${M(install.trip)}</b>.<br>\n       <span class="mini">Press "Back to the rate card" on Prices &amp; Rates to restore his figures, or\n       leave these in if he has given you new ones. Do not send a laying price built on a rate he has\n       not given.</span></div>`;
@@ -931,7 +946,7 @@ function renderInstall() {
     return `<tr style="${on ? "background:#ffe9e2" : ""}">\n      <td><b>${r.label}</b>${on ? ' <span class="pill p-sent">chosen</span>' : ""}</td>\n      <td class="mini">${r.basis}</td>\n      <td class="num"><b>${M(r.charge)}</b></td>\n      \x3c!-- PUBLIC BUILD: cost, profit and margin are emitted empty. There is no\n           cost input in this file to compute them from, and they were only ever\n           CSS-hidden before — the figures still reached the DOM. --\x3e\n      <td class="num internal"></td>\n      <td class="num internal"></td>\n      <td class="num internal"></td></tr>`;
   })).join("");
   const p = installPrice(area, rate, tlbHours, trips);
-  $("iNote").innerHTML = `Includes <b>levelling, bedding sand, paving and finishes</b> at <b>${M(rate)}/m²</b> over\n     ${area.toFixed(1)} m². Excludes excavation — TLB at <b>${M(install.tlb)}/hour</b>, charged on the\n     side at what it costs.` + (p.tlb ? ` ${tlbHours.toFixed(1)} hour${tlbHours === 1 ? "" : "s"} of TLB adds <b>${M(p.tlb)}</b>.` : "") + `<br><br>On terrain the same ${area.toFixed(1)} m² runs <b>${M(p.bandLow)}</b> (easy) to\n     <b>${M(p.bandHigh)}</b> (hard) — the rate moves with the ground, and with nothing else.` + (p.trans ? `<br><br><span class="mini">Trips: site fuel is already inside the monthly transport\n     overhead carried by every paver. Charging ${trips} trip${trips === 1 ? "" : "s"} here as well counts it\n     twice — add them only for out-of-town sites.</span>` : "");
+  $("iNote").innerHTML = `Includes <b>levelling, bedding sand, paving and finishes</b> at <b>${M(rate)}/m²</b> over\n     ${area.toFixed(1)} m². Excludes excavation — TLB at <b>${M(install.tlb)}/hour</b>, charged on the\n     side.` + (p.tlb ? ` ${tlbHours.toFixed(1)} hour${tlbHours === 1 ? "" : "s"} of TLB adds <b>${M(p.tlb)}</b>.` : "") + `<br><br>On terrain the same ${area.toFixed(1)} m² runs <b>${M(p.bandLow)}</b> (easy) to\n     <b>${M(p.bandHigh)}</b> (hard) — the rate moves with the ground, and with nothing else.` + (p.trans ? `<br><br><span class="mini">Trips: site fuel is already inside the monthly transport\n     overhead carried by every paver. Charging ${trips} trip${trips === 1 ? "" : "s"} here as well counts it\n     twice — add them only for out-of-town sites.</span>` : "");
 }
 
 function currentInstall() {
@@ -1114,8 +1129,8 @@ function fillCrewGround() {
   const cs = $("icrew"), gs = $("iground");
   if (!cs || !gs) return;
   const cv = cs.value, gv = gs.value;
-  cs.innerHTML = crews.map((c => `<option value="${c.id}">${c.name} — ${c.size} people</option>`)).join("");
-  gs.innerHTML = ground.map((g => `<option value="${g.code}">${g.name}</option>`)).join("");
+  cs.innerHTML = crews.map((c => `<option value="${esc(c.id)}">${esc(c.name)} — ${esc(c.size)} people</option>`)).join("");
+  gs.innerHTML = ground.map((g => `<option value="${esc(g.code)}">${esc(g.name)}</option>`)).join("");
   if (cv) cs.value = cv;
   if (gv) gs.value = gv; else gs.value = "NORMAL";
 }
@@ -1123,7 +1138,7 @@ function fillCrewGround() {
 function renderCrews() {
   const el = $("crewRows");
   if (!el) return;
-  el.innerHTML = crews.map(((c, i) => `\n    <div class="mat">\n      <div><b>${c.name}</b><div class="mini">${c.size} people</div></div>\n      <div><label>People</label><input type="number" value="${c.size}" min="1" onchange="updCrew(${i},'size',this.value)"></div>\n      <div><label>m² per day (normal ground)</label><input type="number" value="${c.speed}" onchange="updCrew(${i},'speed',this.value)"></div>\n      <div class="actions">${crews.length > 1 ? `<button class="btn dgr sm" onclick="delCrew(${i})">Remove</button>` : ""}</div>\n    </div>`)).join("");
+  el.innerHTML = crews.map(((c, i) => `\n    <div class="mat">\n      <div><b>${esc(c.name)}</b><div class="mini">${esc(c.size)} people</div></div>\n      <div><label>People</label><input type="number" value="${esc(c.size)}" min="1" onchange="updCrew(${i},'size',this.value)"></div>\n      <div><label>m² per day (normal ground)</label><input type="number" value="${esc(c.speed)}" onchange="updCrew(${i},'speed',this.value)"></div>\n      <div class="actions">${crews.length > 1 ? `<button class="btn dgr sm" onclick="delCrew(${i})">Remove</button>` : ""}</div>\n    </div>`)).join("");
 }
 
 function updCrew(i, k, v) {
@@ -1164,7 +1179,7 @@ function delCrew(i) {
 function renderGround() {
   const el = $("groundRows");
   if (!el) return;
-  el.innerHTML = ground.map(((g, i) => `\n    <div class="mat">\n      <div><b>${g.name}</b><div class="mini">${g.why}</div></div>\n      <div><label>Speed factor</label><input type="number" step="0.05" value="${g.speed}" onchange="ground[${i}].speed=parseFloat(this.value)||1"></div>\n      <div><label>Base-prep factor</label><input type="number" step="0.05" value="${g.prep}" onchange="ground[${i}].prep=parseFloat(this.value)||1"></div>\n      <div class="mini">${g.speed > 1 ? "faster" : g.speed < 1 ? "slower" : "baseline"}</div>\n    </div>`)).join("");
+  el.innerHTML = ground.map(((g, i) => `\n    <div class="mat">\n      <div><b>${esc(g.name)}</b><div class="mini">${esc(g.why)}</div></div>\n      <div><label>Speed factor</label><input type="number" step="0.05" value="${esc(g.speed)}" onchange="ground[${i}].speed=parseFloat(this.value)||1"></div>\n      <div><label>Base-prep factor</label><input type="number" step="0.05" value="${esc(g.prep)}" onchange="ground[${i}].prep=parseFloat(this.value)||1"></div>\n      <div class="mini">${g.speed > 1 ? "faster" : g.speed < 1 ? "slower" : "baseline"}</div>\n    </div>`)).join("");
 }
 
 function saveGround() {
@@ -1193,12 +1208,15 @@ function renderTrade() {
   const days = Math.ceil(area / ((crew.speed || 45) * (g ? g.speed : 1)));
   const lay = installPrice(area, install.rate, 0, 0);
   const instRevenue = supply + lay.total;
-  $("tierBox").innerHTML = `\n    <div class="tot" style="margin-bottom:14px">\n      <div><div class="lbl">Trade order — ${tier.name}</div>\n        <div class="big">${M(revenue)}</div>\n        <div class="brk">${area} m² · ${units.toLocaleString("en-US")} pavers · ${M(c.price)} each · ${M(c.perM2)}/m²<br>\n        ${ic(`Cost to make <b>${M(cost)}</b> · Profit <b>${M(revenue - cost)}</b> at ${tier.off}% off the list<br>`)}\n        Terms: ${tier.terms}</div></div>\n    </div>\n    ${ic(`<div class="alert a-ok">\n      <b>Same ${area} m², two ways — revenue, not profit.</b><br>\n      · <b>Trade supply:</b> ${M(revenue)} at ${tier.off}% off the list. No crew, no site, no weather.<br>\n      · <b>Supply and lay:</b> ${M(instRevenue)} — ${M(supply)} of pavers plus ${M(lay.total)} of laying at\n        ${M(install.rate)}/m², and it ties up a crew for about ${days} day${days > 1 ? "s" : ""} with the site risk on you.<br>\n      <span class="mini">Which one earns more depends on what laying costs you, and that figure is\n      deliberately not in this copy. Your own copy has it.</span>\n    </div>`)}`;
+  $("tierBox").innerHTML = `\n    <div class="tot" style="margin-bottom:14px">\n      <div><div class="lbl">Trade order — ${esc(tier.name)}</div>\n        <div class="big">${M(revenue)}</div>\n        <div class="brk">${area} m² · ${units.toLocaleString("en-US")} pavers · ${M(c.price)} each · ${M(c.perM2)}/m²<br>\n        ${ic(`Cost to make <b>${M(cost)}</b> · Profit <b>${M(revenue - cost)}</b> at ${esc(tier.off)}% off the list<br>`)}\n        Terms: ${esc(tier.terms)}</div></div>\n    </div>\n    ${ic(`<div class="alert a-ok">\n      <b>Same ${area} m², two ways — revenue, not profit.</b><br>\n      · <b>Trade supply:</b> ${M(revenue)} at ${esc(tier.off)}% off the list. No crew, no site, no weather.<br>\n      · <b>Supply and lay:</b> ${M(instRevenue)} — ${M(supply)} of pavers plus ${M(lay.total)} of laying at\n        ${M(install.rate)}/m², and it ties up a crew for about ${days} day${days > 1 ? "s" : ""} with the site risk on you.<br>\n      <span class="mini">Which one earns more depends on what laying costs you, and that figure is\n      deliberately not in this copy. Your own copy has it.</span>\n    </div>`)}`;
   $("tListRows").innerHTML = PRODUCTS.flatMap((pr => sorted.map((t => {
     const cc = unitCosting(pr, materials, t.off);
-    return `<tr><td>${pr.name}</td><td><b>${t.name}</b></td><td class="num">${t.min}</td>\n        <td class="num">${M(cc.price)}</td><td class="num"><b>${M(cc.perM2)}</b></td><td class="mini">${t.terms}</td></tr>`;
+    return `<tr><td>${pr.name}</td><td><b>${esc(t.name)}</b></td><td class="num">${esc(t.min)}</td>\n        <td class="num">${M(cc.price)}</td><td class="num"><b>${M(cc.perM2)}</b></td><td class="mini">${esc(t.terms)}</td></tr>`;
   })))).join("");
-  $("tierEdit").innerHTML = sorted.map(((t, i) => `\n    <div class="mat">\n      <div><b>${t.name}</b><div class="mini">${t.terms}</div></div>\n      <div><label>From (m²)</label><input type="number" value="${t.min}" onchange="tiers[${i}].min=+this.value||0"></div>\n      <div><label>Discount off list %</label><input type="number" value="${t.off}" step="0.01" onchange="tiers[${i}].off=+this.value||0"></div>\n      <div class="mini">${M(unitCosting(PRODUCTS[0], materials, t.off).perM2)}/m² on SQ200</div>\n    </div>`)).join("");
+  $("tierEdit").innerHTML = sorted.map((t => {
+    const i = tiers.indexOf(t);
+    return `\n    <div class="mat">\n      <div><b>${esc(t.name)}</b><div class="mini">${esc(t.terms)}</div></div>\n      <div><label>From (m²)</label><input type="number" value="${esc(t.min)}" onchange="tiers[${i}].min=+this.value||0"></div>\n      <div><label>Discount off list %</label><input type="number" value="${esc(t.off)}" step="0.01" onchange="tiers[${i}].off=+this.value||0"></div>\n      <div class="mini">${M(unitCosting(PRODUCTS[0], materials, t.off).perM2)}/m² on SQ200</div>\n    </div>`;
+  })).join("");
 }
 
 function saveTiers() {
@@ -1303,7 +1321,7 @@ function unitCostingD(prod, prices, markup) {
 
 function renderSetup() {
   if (!$("ohRows")) return;
-  $("ohRows").innerHTML = setup.overheads.map(((o, i) => `\n    <div class="mat">\n      <div><b>${o.name}</b><div class="mini">${o.cat}</div></div>\n      <div><label>Per month (M)</label><input type="number" value="${o.amt}" onchange="setup.overheads[${i}].amt=+this.value||0;saveSetup(true)"></div>\n      <div class="mini">${(ohTotal() ? o.amt / ohTotal() * 100 : 0).toFixed(0)}% of overhead</div>\n      <div class="actions"><button class="btn dgr sm" onclick="delOverhead(${i})">Remove</button></div>\n    </div>`)).join("");
+  $("ohRows").innerHTML = setup.overheads.map(((o, i) => `\n    <div class="mat">\n      <div><b>${esc(o.name)}</b><div class="mini">${esc(o.cat)}</div></div>\n      <div><label>Per month (M)</label><input type="number" value="${esc(o.amt)}" onchange="setup.overheads[${i}].amt=+this.value||0;saveSetup(true)"></div>\n      <div class="mini">${(ohTotal() ? o.amt / ohTotal() * 100 : 0).toFixed(0)}% of overhead</div>\n      <div class="actions"><button class="btn dgr sm" onclick="delOverhead(${i})">Remove</button></div>\n    </div>`)).join("");
   $("ohTotal").textContent = M(ohTotal());
   const p0 = PRODUCTS[0];
   $("ohNote").innerHTML = usingCapturedOh() ? `Spread over about <b>${Math.round(unitsPM(p0)).toLocaleString("en-US")}</b> ${p0.code} pavers a month = <b>${M(capturedOverhead(p0))}</b> of overhead in every paver.` : `Nothing entered yet. Fill these in — they stay on this phone, and they tell you what each paver really costs you.`;
@@ -1312,7 +1330,7 @@ function renderSetup() {
   $("cap_days").value = setup.cap.days;
   $("cap_batches").value = setup.cap.batches;
   $("cap_yield").value = setup.cap.yield;
-  $("capNote").innerHTML = `${setup.cap.days} days × ${setup.cap.batches} batches = <b>${batchesPM()}</b> batches a month → about <b>${Math.round(unitsPM(p0)).toLocaleString("en-US")}</b> ${p0.code} pavers.`;
+  $("capNote").innerHTML = `${esc(setup.cap.days)} days × ${esc(setup.cap.batches)} batches = <b>${batchesPM()}</b> batches a month → about <b>${Math.round(unitsPM(p0)).toLocaleString("en-US")}</b> ${p0.code} pavers.`;
   $("br_cem").value = setup.recipe.cement;
   $("br_sand").value = setup.recipe.sand;
   $("br_stone").value = setup.recipe.stone;
@@ -1327,7 +1345,7 @@ function renderSetup() {
   }
   $("mouldRows").innerHTML = setup.moulds.length ? setup.moulds.map(((m, i) => {
     const pr = PRODUCTS.find((p => p.code === m.product));
-    return `<div class="mat">\n      <div><b>${pr ? pr.name : m.product}</b><div class="mini">${(+m.pours).toLocaleString("en-US")} pours expected</div></div>\n      <div><label>Cost (M)</label><input type="number" value="${m.cost}" onchange="setup.moulds[${i}].cost=+this.value||0;saveSetup(true)"></div>\n      <div><label>Expected pours</label><input type="number" value="${m.pours}" onchange="setup.moulds[${i}].pours=+this.value||1;saveSetup(true)"></div>\n      <div class="mini">${M(m.cost / (m.pours || 1))} per paver</div>\n    </div>`;
+    return `<div class="mat">\n      <div><b>${pr ? pr.name : esc(m.product)}</b><div class="mini">${(+m.pours).toLocaleString("en-US")} pours expected</div></div>\n      <div><label>Cost (M)</label><input type="number" value="${esc(m.cost)}" onchange="setup.moulds[${i}].cost=+this.value||0;saveSetup(true)"></div>\n      <div><label>Expected pours</label><input type="number" value="${esc(m.pours)}" onchange="setup.moulds[${i}].pours=+this.value||1;saveSetup(true)"></div>\n      <div class="mini">${M(m.cost / (m.pours || 1))} per paver</div>\n    </div>`;
   })).join("") : `<p class="mini">No moulds entered yet. Add one and the system works out the wear in every paver. Kept on this phone.</p>`;
   renderWorking();
   renderShare();
@@ -1490,6 +1508,40 @@ function backupAll() {
   setTimeout((() => URL.revokeObjectURL(a.href)), 2e3);
 }
 
+const RESTORE_SHAPES = {
+  tms_quotes: "list",
+  tms_jobs: "list",
+  tms_runs: "list",
+  tms_deliveries: "list",
+  tms_invoices: "list",
+  tms_crews: "list",
+  tms_ground: "list",
+  tms_tiers: "list",
+  tms_materials: "record",
+  tms_install: "record",
+  tms_setup: "record",
+  tms_stockcfg: "record",
+  tms_invcfg: "record",
+  tms_seq_quote: "count",
+  tms_seq_job: "count",
+  tms_seq_invoice: "count"
+};
+
+function restorable(k, raw) {
+  const shape = Object.prototype.hasOwnProperty.call(RESTORE_SHAPES, k) ? RESTORE_SHAPES[k] : null;
+  if (!shape || typeof raw !== "string") return false;
+  let v;
+  try {
+    v = JSON.parse(raw);
+  } catch (e) {
+    return false;
+  }
+  const isRecord = x => !!x && typeof x === "object" && !Array.isArray(x);
+  if (shape === "list") return Array.isArray(v) && v.every(isRecord);
+  if (shape === "record") return isRecord(v);
+  return Number.isInteger(v) && v >= 0;
+}
+
 function restoreAll(evt) {
   const f = evt.target.files && evt.target.files[0];
   if (!f) return;
@@ -1498,11 +1550,15 @@ function restoreAll(evt) {
     try {
       const d = JSON.parse(r.result);
       if (!d || d.tms_backup !== 1 || !d.keys) throw new Error("not a TM Stone backup");
-      Object.keys(d.keys).forEach((k => {
-        if (k.indexOf("tms_") === 0) localStorage.setItem(k, d.keys[k]);
-      }));
-      alert("Restored " + Object.keys(d.keys).length + " saved items. The page will reload.");
-      location.reload();
+      const ours = Object.keys(d.keys).filter((k => k.indexOf("tms_") === 0));
+      const kept = ours.filter((k => restorable(k, d.keys[k])));
+      const left = ours.filter((k => !kept.includes(k)));
+      const leftNote = left.length ? " Left out, because this page does not use them or they are not in the form it expects: " + left.join(", ") + "." : "";
+      if (!kept.length) alert("Nothing in that file could be restored." + leftNote); else {
+        kept.forEach((k => localStorage.setItem(k, d.keys[k])));
+        alert("Restored " + kept.length + " saved items." + leftNote + " The page will reload.");
+        location.reload();
+      }
     } catch (e) {
       alert("That file could not be read as a TM Stone backup.");
     }
@@ -1519,7 +1575,12 @@ const today0 = () => (new Date).toISOString().slice(0, 10);
 
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5);
 
-const prodOf = code => PRODUCTS.find((p => p.code === (code === "HEX200" ? "HEX240" : code))) || PRODUCTS[0];
+const RETIRED_CODES = {
+  HEX200: "HEX240",
+  BR220: "INT200"
+};
+
+const prodOf = code => PRODUCTS.find((p => p.code === (RETIRED_CODES[code] || code))) || PRODUCTS[0];
 
 const unitsPerBatch = code => setup.cap.yield / prodOf(code).litres;
 
@@ -1609,16 +1670,16 @@ function fillJobPickers() {
     $("r_prod").innerHTML = PRODUCTS.map((p => `<option value="${p.code}">${p.name}</option>`)).join("");
     $("r_date").value = today0();
   }
-  $("j_crew").innerHTML = crews.map((c => `<option value="${c.id}">${c.name}</option>`)).join("");
+  $("j_crew").innerHTML = crews.map((c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`)).join("");
   const gsel = $("j_ground").value;
-  $("j_ground").innerHTML = ground.map((g => `<option value="${g.code}">${g.name}</option>`)).join("");
+  $("j_ground").innerHTML = ground.map((g => `<option value="${esc(g.code)}">${esc(g.name)}</option>`)).join("");
   $("j_ground").value = gsel || "NORMAL";
   const used = new Set(jobs.map((j => j.quote_no)));
   const open = quotes.filter((q => !used.has(q.quote_no)));
-  $("j_quote").innerHTML = open.length ? open.map((q => `<option value="${q.quote_no}">${q.quote_no} — ${q.customer} (${M(q.total)})</option>`)).join("") : '<option value="">— no unconverted quotes —</option>';
+  $("j_quote").innerHTML = open.length ? open.map((q => `<option value="${esc(q.quote_no)}">${esc(q.quote_no)} — ${esc(q.customer)} (${M(q.total)})</option>`)).join("") : '<option value="">— no unconverted quotes —</option>';
   const hint = $("runHint");
   const code = $("r_prod").value, exp = Math.round(unitsPerBatch(code) * (+$("r_batches").value || 0));
-  hint.innerHTML = exp ? `At ${setup.cap.yield} L a batch that should give about <b>${exp.toLocaleString("en-US")}</b> ${code} pavers.` : "";
+  hint.innerHTML = exp ? `At ${esc(setup.cap.yield)} L a batch that should give about <b>${exp.toLocaleString("en-US")}</b> ${code} pavers.` : "";
 }
 
 function renderToday() {
@@ -1632,9 +1693,9 @@ function renderToday() {
     gap: unitsAvailable(p.code)
   }))).filter((x => x.gap < 0));
   let h = "";
-  if (late.length) h += `<div class="alert a-warn"><b>${late.length} job${late.length > 1 ? "s" : ""} past the promised date</b><br>` + late.map((j => `${j.job_no} — ${j.customer}, promised ${j.promised_end} (${-daysBetween(today0(), j.promised_end)} days ago)`)).join("<br>") + "</div>";
+  if (late.length) h += `<div class="alert a-warn"><b>${late.length} job${late.length > 1 ? "s" : ""} past the promised date</b><br>` + late.map((j => `${esc(j.job_no)} — ${esc(j.customer)}, promised ${esc(j.promised_end)} (${-daysBetween(today0(), j.promised_end)} days ago)`)).join("<br>") + "</div>";
   if (short.length) h += `<div class="alert a-warn" style="margin-top:10px"><b>Still to pour</b><br>` + short.map((x => `${x.p.name}: ${Math.abs(Math.round(x.gap)).toLocaleString("en-US")} pavers promised and not yet made — about ${daysToProduce(x.p.code, Math.abs(x.gap)) ?? "?"} days of pouring`)).join("<br>") + "</div>";
-  h += `<div class="tot" style="margin-top:${h ? "12px" : "0"}">\n      <div><div class="lbl">On site now</div><div class="big">${now.length}</div>\n        <div class="brk">${now.map((j => j.job_no + " · " + j.customer)).join("<br>") || "nothing on site"}</div></div>\n      <div><div class="lbl">Coming up</div><div class="big">${soon.length}</div>\n        <div class="brk">${soon.slice(0, 3).map((j => j.job_no + " · " + (j.promised_start || "unscheduled"))).join("<br>") || "nothing scheduled"}</div></div>\n    </div>`;
+  h += `<div class="tot" style="margin-top:${h ? "12px" : "0"}">\n      <div><div class="lbl">On site now</div><div class="big">${now.length}</div>\n        <div class="brk">${now.map((j => esc(j.job_no) + " · " + esc(j.customer))).join("<br>") || "nothing on site"}</div></div>\n      <div><div class="lbl">Coming up</div><div class="big">${soon.length}</div>\n        <div class="brk">${soon.slice(0, 3).map((j => esc(j.job_no) + " · " + esc(j.promised_start || "unscheduled"))).join("<br>") || "nothing scheduled"}</div></div>\n    </div>`;
   if (!jobs.length) h = '<p class="mini">No jobs yet. Save a quote, then create a job from it below.</p>';
   $("todayBoard").innerHTML = h;
 }
@@ -1686,7 +1747,7 @@ function renderRuns() {
   const rows = runs.slice(0, 12).map(((r, i) => {
     const tot = +r.good + +r.reject;
     const y = tot ? (r.good / tot * 100).toFixed(0) : "—";
-    return `<tr><td>${r.date}</td><td>${r.code}</td><td class="num">${r.batches}</td>\n      <td class="num">${(+r.good).toLocaleString("en-US")}</td>\n      <td class="num" style="color:${+r.reject > 0 ? "#b3261e" : "inherit"}">${r.reject}</td>\n      <td class="num">${y}%</td><td class="mini">${r.by || ""}</td>\n      <td><button class="btn dgr sm" onclick="delRun(${i})">×</button></td></tr>`;
+    return `<tr><td>${esc(r.date)}</td><td>${esc(r.code)}</td><td class="num">${esc(r.batches)}</td>\n      <td class="num">${(+r.good).toLocaleString("en-US")}</td>\n      <td class="num" style="color:${+r.reject > 0 ? "#b3261e" : "inherit"}">${esc(r.reject)}</td>\n      <td class="num">${y}%</td><td class="mini">${esc(r.by)}</td>\n      <td><button class="btn dgr sm" onclick="delRun(${i})">×</button></td></tr>`;
   })).join("");
   $("runRows").innerHTML = `<table><thead><tr><th>Date</th><th>Product</th><th class="num">Batches</th>\n    <th class="num">Good</th><th class="num">Broken</th><th class="num">Yield</th><th>By</th><th></th></tr></thead>\n    <tbody>${rows}</tbody></table>` + (runs.length > 12 ? `<p class="mini" style="margin-top:8px">Showing the last 12 of ${runs.length}.</p>` : "");
 }
@@ -1744,7 +1805,7 @@ function renderJobList() {
     const f = feasibility(j);
     const bad = f.filter((x => !x.ok));
     const crew = crews.find((c => c.id === j.crew_id));
-    return `<div class="mat" style="grid-template-columns:1fr;gap:8px">\n      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">\n        <div><b>${j.job_no} — ${j.customer}</b>\n          <div class="mini">${j.site || "site not set"} · ${j.area} m² · ${(+j.units).toLocaleString("en-US")} pavers\n            · ${crew ? crew.name : "no crew"} · from ${j.quote_no}</div></div>\n        <div class="rowctl">\n          <select onchange="setJobStatus(${i}, this.value)">\n            ${JOB_STATES.map((st => `<option ${st === j.status ? "selected" : ""}>${st}</option>`)).join("")}\n          </select>\n          <button class="btn dgr sm" onclick="delJob(${i})">×</button></div>\n      </div>\n      ${priceLine(i, j)}\n      <div class="alert ${bad.length ? "a-warn" : "a-ok"}" style="margin:0">\n        ${f.map((x => `${x.ok ? "✓" : "✗"} <b>${x.name}:</b> ${x.detail}`)).join("<br>")}\n      </div>\n    </div>`;
+    return `<div class="mat" style="grid-template-columns:1fr;gap:8px">\n      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">\n        <div><b>${esc(j.job_no)} — ${esc(j.customer)}</b>\n          <div class="mini">${esc(j.site || "site not set")} · ${esc(j.area)} m² · ${(+j.units).toLocaleString("en-US")} pavers\n            · ${crew ? esc(crew.name) : "no crew"} · from ${esc(j.quote_no)}</div></div>\n        <div class="rowctl">\n          <select onchange="setJobStatus(${i}, this.value)">\n            ${JOB_STATES.map((st => `<option ${st === j.status ? "selected" : ""}>${st}</option>`)).join("")}\n          </select>\n          <button class="btn dgr sm" onclick="delJob(${i})">×</button></div>\n      </div>\n      ${priceLine(i, j)}\n      <div class="alert ${bad.length ? "a-warn" : "a-ok"}" style="margin:0">\n        ${f.map((x => `${x.ok ? "✓" : "✗"} <b>${x.name}:</b> ${esc(x.detail)}`)).join("<br>")}\n      </div>\n    </div>`;
   })).join("");
 }
 
@@ -1895,7 +1956,8 @@ function reorderReport() {
 function committedMaterials() {
   const units = jobs.filter((j => [ "accepted", "scheduled", "laying" ].includes(j.status))).reduce(((s, j) => s + (+j.units || 0)), 0);
   const code = "SQ200";
-  const batches = units ? units / (unitsPerBatch(code) * Math.max(actualYield(code), .01)) : 0;
+  const perBatch = unitsPerBatch(code) * Math.max(actualYield(code), .01);
+  const batches = units && perBatch ? units / perBatch : 0;
   return Object.keys(STOCK_UNITS).map((m => {
     const needed = batches * perBatchUsage(m), onHand = materialOnHand(m);
     return {
@@ -1914,7 +1976,7 @@ function renderStockPage() {
     $("d_date").value = today0();
   }
   const rr = reorderReport();
-  $("reorderRows").innerHTML = rr.map((r => `\n    <div class="alert ${r.tone === "bad" ? "a-warn" : r.tone === "warn" ? "a-warn" : "a-ok"}" style="margin-bottom:9px">\n      <b>${MAT_NAMES[r.code]}: ${r.verdict}</b> —\n      ${r.onHand.toFixed(1)} ${STOCK_UNITS[r.code]} on hand, using ${r.daily.toFixed(2)} a day.<br>\n      <span class="mini">${r.detail}${stockCfg[r.code].countedAt ? " Counted " + stockCfg[r.code].countedAt + ", less everything poured since." : ""}</span></div>`)).join("");
+  $("reorderRows").innerHTML = rr.map((r => `\n    <div class="alert ${r.tone === "bad" ? "a-warn" : r.tone === "warn" ? "a-warn" : "a-ok"}" style="margin-bottom:9px">\n      <b>${MAT_NAMES[r.code]}: ${r.verdict}</b> —\n      ${r.onHand.toFixed(1)} ${STOCK_UNITS[r.code]} on hand, using ${r.daily.toFixed(2)} a day.<br>\n      <span class="mini">${esc(r.detail)}${stockCfg[r.code].countedAt ? " Counted " + esc(stockCfg[r.code].countedAt) + ", less everything poured since." : ""}</span></div>`)).join("");
   $("committedRows").innerHTML = committedMaterials().map((c => `\n    <tr><td>${MAT_NAMES[c.code]}</td>\n      <td class="num">${c.needed.toFixed(1)} ${STOCK_UNITS[c.code]}</td>\n      <td class="num">${c.onHand.toFixed(1)}</td>\n      <td class="num" style="color:${c.short > 0 ? "#b3261e" : "inherit"};font-weight:${c.short > 0 ? "700" : "400"}">\n        ${c.short > 0 ? c.short.toFixed(1) + ic(" — " + M(c.short * pricePerStockUnit(c.code)) + " to buy") : "—"}</td></tr>`)).join("");
   const code = $("d_mat").value, qty = +$("d_qty").value, paid = +$("d_paid").value;
   $("d_hint").innerHTML = SHOW_INTERNAL_COSTS && qty > 0 && paid > 0 ? function() {
@@ -1922,8 +1984,8 @@ function renderStockPage() {
     const pct = ou ? (nu - ou) / ou * 100 : 0;
     return `That is <b>${M(nu)}</b> per ${STOCK_UNITS[code]}. You are currently pricing at ${M(ou)} — ` + (Math.abs(pct) < .5 ? "no change." : `<b>${pct > 0 ? "up" : "down"} ${Math.abs(pct).toFixed(1)}%</b>. Booking this in re-prices every new quote` + (pct > 0 ? " and flags the ones already out on the old price." : "."));
   }() : `Quantity in <b>${STOCK_UNITS[code]}</b>, and the total on the invoice.`;
-  $("deliveryRows").innerHTML = deliveries.length ? `<table><thead><tr><th>Date</th><th>Material</th><th class="num">Qty</th><th class="num internal">Paid</th>\n        <th class="num internal">Per unit</th><th>Invoice</th><th></th></tr></thead><tbody>` + deliveries.slice(0, 10).map(((d, i) => `<tr><td>${d.date}</td><td>${MAT_NAMES[d.code]}</td>\n        <td class="num">${d.qty} ${STOCK_UNITS[d.code]}</td><td class="num internal">${M(d.paid)}</td>\n        <td class="num internal">${M(d.paid / (d.qty || 1))}</td><td class="mini">${d.inv || ""}</td>\n        <td><button class="btn dgr sm" onclick="delDelivery(${i})">×</button></td></tr>`)).join("") + "</tbody></table>" : '<p class="mini">No deliveries booked in yet.</p>';
-  $("stockSetRows").innerHTML = Object.keys(STOCK_UNITS).map((c => `\n    <div class="mat">\n      <div><b>${MAT_NAMES[c]}</b><div class="mini">held in ${STOCK_UNITS[c]}</div></div>\n      <div><label>Counted (${STOCK_UNITS[c]})</label>\n        <input type="number" step="0.5" value="${stockCfg[c].counted ?? stockCfg[c].opening}"\n               onchange="setCount('${c}', this.value)"></div>\n      <div><label>As at</label>\n        <input type="date" value="${stockCfg[c].countedAt || ""}"\n               onchange="stockCfg['${c}'].countedAt = this.value || null; saveStock()"></div>\n      <div><label>Lead time (days)</label>\n        <input type="number" min="0" step="1" value="${stockCfg[c].lead}"\n               onchange="stockCfg['${c}'].lead=+this.value||0; saveStock()"></div>\n    </div>`)).join("");
+  $("deliveryRows").innerHTML = deliveries.length ? `<table><thead><tr><th>Date</th><th>Material</th><th class="num">Qty</th><th class="num internal">Paid</th>\n        <th class="num internal">Per unit</th><th>Invoice</th><th></th></tr></thead><tbody>` + deliveries.slice(0, 10).map(((d, i) => `<tr><td>${esc(d.date)}</td><td>${esc(MAT_NAMES[d.code])}</td>\n        <td class="num">${esc(d.qty)} ${esc(STOCK_UNITS[d.code])}</td><td class="num internal">${M(d.paid)}</td>\n        <td class="num internal">${M(d.paid / (d.qty || 1))}</td><td class="mini">${esc(d.inv)}</td>\n        <td><button class="btn dgr sm" onclick="delDelivery(${i})">×</button></td></tr>`)).join("") + "</tbody></table>" : '<p class="mini">No deliveries booked in yet.</p>';
+  $("stockSetRows").innerHTML = Object.keys(STOCK_UNITS).map((c => `\n    <div class="mat">\n      <div><b>${MAT_NAMES[c]}</b><div class="mini">held in ${STOCK_UNITS[c]}</div></div>\n      <div><label>Counted (${STOCK_UNITS[c]})</label>\n        <input type="number" step="0.5" value="${esc(stockCfg[c].counted ?? stockCfg[c].opening)}"\n               onchange="setCount('${c}', this.value)"></div>\n      <div><label>As at</label>\n        <input type="date" value="${esc(stockCfg[c].countedAt)}"\n               onchange="stockCfg['${c}'].countedAt = this.value || null; saveStock()"></div>\n      <div><label>Lead time (days)</label>\n        <input type="number" min="0" step="1" value="${esc(stockCfg[c].lead)}"\n               onchange="stockCfg['${c}'].lead=+this.value||0; saveStock()"></div>\n    </div>`)).join("");
 }
 
 function setCount(code, v) {
@@ -2074,9 +2136,9 @@ function renderMoney() {
   $("cashTot").innerHTML = `\n    <div><div class="lbl">Invoiced</div><div class="big">${M(c.invoiced)}</div>\n      <div class="brk">${invoices.filter((i => !i.written_off)).length} invoice(s)</div></div>\n    <div><div class="lbl">Still owed to you</div><div class="big">${M(c.outstanding)}</div>\n      <div class="brk">${c.overdue > .005 ? '<b style="color:#ffb4a8">' + M(c.overdue) + " of it is overdue</b>" : "nothing overdue"} · collected ${M(c.collected)}</div></div>`;
   $("agingRows").innerHTML = agingReport().map((b => `\n    <tr><td>${b.name}</td><td class="num">${b.count}</td>\n      <td class="num" style="${b.name !== "Not yet due" && b.amount > .005 ? "color:#b3261e;font-weight:700" : ""}">\n        ${M(b.amount)}</td></tr>`)).join("");
   const leak = uninvoicedWork();
-  $("leakRows").innerHTML = leak.length ? `<div class="alert a-warn"><b>${leak.length} finished job${leak.length > 1 ? "s have" : " has"} no invoice —\n         ${M(leak.reduce(((s, j) => s + jobValue(j)), 0))} you have done the work for and not asked for.</b><br>` + leak.map((j => `${j.job_no} — ${j.customer}, ${M(jobValue(j))}`)).join("<br>") + "</div>" : '<p class="mini">Nothing finished is sitting uninvoiced.</p>';
+  $("leakRows").innerHTML = leak.length ? `<div class="alert a-warn"><b>${leak.length} finished job${leak.length > 1 ? "s have" : " has"} no invoice —\n         ${M(leak.reduce(((s, j) => s + jobValue(j)), 0))} you have done the work for and not asked for.</b><br>` + leak.map((j => `${esc(j.job_no)} — ${esc(j.customer)}, ${M(jobValue(j))}`)).join("<br>") + "</div>" : '<p class="mini">Nothing finished is sitting uninvoiced.</p>';
   const open = jobs.filter((j => ![ "lost" ].includes(j.status)));
-  $("i_job").innerHTML = open.length ? open.map((j => `<option value="${j.job_no}">${j.job_no} — ${j.customer} (${M(jobValue(j))})</option>`)).join("") : '<option value="">— no jobs yet —</option>';
+  $("i_job").innerHTML = open.length ? open.map((j => `<option value="${esc(j.job_no)}">${esc(j.job_no)} — ${esc(j.customer)} (${M(jobValue(j))})</option>`)).join("") : '<option value="">— no jobs yet —</option>';
   if (!$("i_terms").value) $("i_terms").value = invCfg.terms;
   renderInvHint();
   renderInvList();
@@ -2093,7 +2155,7 @@ function renderInvHint() {
   const vat = invCfg.vatRegistered ? sub * invCfg.vatRate / 100 : 0;
   const done = alreadyInvoiced(j.job_no), room = jobValue(j) - done;
   const warn = done > .005 ? `<br><b>${M(done)} of ${M(jobValue(j))} already invoiced on this job — ${M(room)} left to bill.</b>` : "";
-  $("i_hint").innerHTML = `${pct}% of ${j.job_no} = <b>${M(sub)}</b>` + (invCfg.vatRegistered ? ` + VAT ${M(vat)} = <b>${M(sub + vat)}</b>` : " — no VAT added") + `, due in ${+$("i_terms").value || invCfg.terms} days.` + warn;
+  $("i_hint").innerHTML = `${pct}% of ${esc(j.job_no)} = <b>${M(sub)}</b>` + (invCfg.vatRegistered ? ` + VAT ${M(vat)} = <b>${M(sub + vat)}</b>` : " — no VAT added") + `, due in ${esc(+$("i_terms").value || invCfg.terms)} days.` + warn;
 }
 
 function alreadyInvoiced(job_no) {
@@ -2180,7 +2242,7 @@ function renderInvList() {
   $("invRows").innerHTML = invoices.map(((inv, i) => {
     const st = invStatus(inv), bal = invBalance(inv);
     const late = inv.sent && bal > 0 && daysOverdue(inv) > 0;
-    return `<div class="mat" style="grid-template-columns:1fr;gap:8px">\n      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">\n        <div><b>${inv.invoice_no} — ${inv.customer}</b>\n          <div class="mini">${inv.kind}${inv.pct < 100 ? " (" + inv.pct + "%)" : ""} · ${inv.job_no}\n            · issued ${inv.issued} · due ${inv.due}\n            ${late ? '· <b style="color:#b3261e">' + daysOverdue(inv) + " days overdue</b>" : ""}</div></div>\n        <div style="text-align:right"><b>${M(inv.total)}</b>\n          <div class="mini">${bal > .005 ? M(bal) + " outstanding" : "paid in full"} · ${st}</div></div>\n      </div>\n      ${inv.vat_shown ? "" : '<div class="mini">No VAT on this invoice.</div>'}\n      <div class="noprint" style="display:flex;gap:7px;flex-wrap:wrap">\n        <button class="btn sm" onclick="printInvoice(${i})">Print / PDF</button>\n        ${!inv.sent ? `<button class="btn sm" onclick="markSent(${i})">Mark sent</button>` : ""}\n        ${bal > 0 ? `<button class="btn sm" onclick="addPayment(${i})">Record a payment</button>` : ""}\n        <button class="btn dgr sm" onclick="delInvoice(${i})">Delete</button>\n      </div>\n      ${(inv.payments || []).length ? '<div class="mini">' + inv.payments.map((p => `${p.date}: ${M(p.amount)}${p.ref ? " (" + p.ref + ")" : ""}`)).join(" · ") + "</div>" : ""}\n    </div>`;
+    return `<div class="mat" style="grid-template-columns:1fr;gap:8px">\n      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">\n        <div><b>${esc(inv.invoice_no)} — ${esc(inv.customer)}</b>\n          <div class="mini">${esc(inv.kind)}${inv.pct < 100 ? " (" + esc(inv.pct) + "%)" : ""} · ${esc(inv.job_no)}\n            · issued ${esc(inv.issued)} · due ${esc(inv.due)}\n            ${late ? '· <b style="color:#b3261e">' + daysOverdue(inv) + " days overdue</b>" : ""}</div></div>\n        <div style="text-align:right"><b>${M(inv.total)}</b>\n          <div class="mini">${bal > .005 ? M(bal) + " outstanding" : "paid in full"} · ${st}</div></div>\n      </div>\n      ${inv.vat_shown ? "" : '<div class="mini">No VAT on this invoice.</div>'}\n      <div class="noprint" style="display:flex;gap:7px;flex-wrap:wrap">\n        <button class="btn sm" onclick="printInvoice(${i})">Print / PDF</button>\n        ${!inv.sent ? `<button class="btn sm" onclick="markSent(${i})">Mark sent</button>` : ""}\n        ${bal > 0 ? `<button class="btn sm" onclick="addPayment(${i})">Record a payment</button>` : ""}\n        <button class="btn dgr sm" onclick="delInvoice(${i})">Delete</button>\n      </div>\n      ${(inv.payments || []).length ? '<div class="mini">' + inv.payments.map((p => `${esc(p.date)}: ${M(p.amount)}${p.ref ? " (" + esc(p.ref) + ")" : ""}`)).join(" · ") + "</div>" : ""}\n    </div>`;
   })).join("");
 }
 
@@ -2231,7 +2293,7 @@ const dmy = d => {
 };
 
 function docHead(kind, meta) {
-  return `<div class="dochead">\n    <div><div class="co">${CO.trading_as || "TM STONE"}</div>\n      <div class="sub">${CO.name || ""}<br>\n        ${CO.address || ""}<br>\n        ${CO.phone ? "Tel " + CO.phone + " · " : ""}Reg ${CO.reg_no || ""}\n        ${invCfg.vatRegistered && invCfg.vatNo ? "<br>VAT " + invCfg.vatNo : ""}</div></div>\n    <div><div class="kind">${kind}</div><div class="meta">${meta}</div></div>\n  </div>`;
+  return `<div class="dochead">\n    <div><div class="co">${CO.trading_as || "TM STONE"}</div>\n      <div class="sub">${CO.name || ""}<br>\n        ${CO.address || ""}<br>\n        ${CO.phone ? "Tel " + CO.phone + " · " : ""}Reg ${CO.reg_no || ""}\n        ${invCfg.vatRegistered && invCfg.vatNo ? "<br>VAT " + esc(invCfg.vatNo) : ""}</div></div>\n    <div><div class="kind">${kind}</div><div class="meta">${meta}</div></div>\n  </div>`;
 }
 
 function docFoot(withInstall, extra) {
@@ -2248,16 +2310,16 @@ function showDoc(html) {
 window.addEventListener("afterprint", (() => document.body.classList.remove("doc")));
 
 function quoteDocHtml(q) {
-  const rows = q.lines.map((l => `<tr>\n      <td>${l.desc || l.name}<div style="font-size:9pt;color:#555">${l.area} m² · ${l.units.toLocaleString("en-US")} pavers${q.wastage ? " incl. " + q.wastage + "% wastage" : ""}</div></td>\n      <td class="num">${l.units.toLocaleString("en-US")}</td>\n      <td class="num">${M(l.unit_price)}</td>\n      <td class="num">${M(l.line_total)}</td></tr>`)).join("");
+  const rows = q.lines.map((l => `<tr>\n      <td>${esc(l.desc || l.name)}<div style="font-size:9pt;color:#555">${esc(l.area)} m² · ${esc(l.units.toLocaleString("en-US"))} pavers${q.wastage ? " incl. " + esc(q.wastage) + "% wastage" : ""}</div></td>\n      <td class="num">${esc(l.units.toLocaleString("en-US"))}</td>\n      <td class="num">${M(l.unit_price)}</td>\n      <td class="num">${M(l.line_total)}</td></tr>`)).join("");
   const area = q.lines.reduce(((s, l) => s + (+l.area || 0)), 0);
   const ins = q.install || {
     mode: "none",
     charge: 0
   };
   const supply = q.lines.reduce(((s, l) => s + (+l.line_total || 0)), 0);
-  const insRow = ins.mode && ins.mode !== "none" && ins.charge > 0 ? `<tr><td>Installation — laying, ${ins.basis || ins.mode.replace(/_/g, " ")}\n         ${ins.days ? '<div style="font-size:9pt;color:#555">about ' + Math.ceil(ins.days) + " working days on site</div>" : ""}</td>\n       <td class="num">—</td><td class="num">—</td><td class="num">${M(ins.charge)}</td></tr>` : "";
+  const insRow = ins.mode && ins.mode !== "none" && ins.charge > 0 ? `<tr><td>Installation — laying, ${esc(ins.basis || String(ins.mode).replace(/_/g, " "))}\n         ${ins.days ? '<div style="font-size:9pt;color:#555">about ' + Math.ceil(ins.days) + " working days on site</div>" : ""}</td>\n       <td class="num">—</td><td class="num">—</td><td class="num">${M(ins.charge)}</td></tr>` : "";
   const valid = new Date(new Date(q.created).getTime() + (q.valid_days || 14) * 864e5);
-  return docHead("QUOTATION", `<b>${q.quote_no}</b><br>Date ${dmy(q.created)}<br>Valid until ${dmy(valid)}`) + `<div class="docto"><div class="lbl">Quotation for</div>\n        <b>${q.customer}</b>${q.phone ? "<br>" + q.phone : ""}${q.site ? "<br>" + q.site : ""}</div>` + `<table><thead><tr><th>Description</th><th class="num">Pavers</th>\n        <th class="num">Each</th><th class="num">Amount</th></tr></thead><tbody>${rows}${insRow}</tbody></table>` + `<div class="doctot"><div><span>Total area</span><span>${area.toFixed(1)} m²</span></div>\n        ${insRow ? `<div><span>Pavers supplied</span><span>${M(supply)}</span></div>\n                    <div><span>Installation</span><span>${M(ins.charge)}</span></div>` : ""}\n        <div class="grand"><span>TOTAL</span><span>${M(q.total)}</span></div>\n        ${insRow ? "" : '<div style="font-size:9.5pt;color:#555"><span>Installation</span><span>not included</span></div>'}</div>` + `<div class="docpay"><h4>Terms</h4>\n        This quotation is valid until ${dmy(valid)}. Prices are based on material costs at\n        ${dmy(q.created)} and may change if input costs move before acceptance.<br>\n        ${invCfg.depositPct ? invCfg.depositPct + "% deposit on acceptance, balance on completion." : ""}</div>` + docFoot(!!insRow);
+  return docHead("QUOTATION", `<b>${esc(q.quote_no)}</b><br>Date ${dmy(q.created)}<br>Valid until ${dmy(valid)}`) + `<div class="docto"><div class="lbl">Quotation for</div>\n        <b>${esc(q.customer)}</b>${q.phone ? "<br>" + esc(q.phone) : ""}${q.site ? "<br>" + esc(q.site) : ""}</div>` + `<table><thead><tr><th>Description</th><th class="num">Pavers</th>\n        <th class="num">Each</th><th class="num">Amount</th></tr></thead><tbody>${rows}${insRow}</tbody></table>` + `<div class="doctot"><div><span>Total area</span><span>${area.toFixed(1)} m²</span></div>\n        ${insRow ? `<div><span>Pavers supplied</span><span>${M(supply)}</span></div>\n                    <div><span>Installation</span><span>${M(ins.charge)}</span></div>` : ""}\n        <div class="grand"><span>TOTAL</span><span>${M(q.total)}</span></div>\n        ${insRow ? "" : '<div style="font-size:9.5pt;color:#555"><span>Installation</span><span>not included</span></div>'}</div>` + `<div class="docpay"><h4>Terms</h4>\n        This quotation is valid until ${dmy(valid)}. Prices are based on material costs at\n        ${dmy(q.created)} and may change if input costs move before acceptance.<br>\n        ${invCfg.depositPct ? esc(invCfg.depositPct) + "% deposit on acceptance, balance on completion." : ""}</div>` + docFoot(!!insRow);
 }
 
 function printSavedQuote(i) {
@@ -2355,9 +2417,9 @@ function invoiceIncludesInstall(inv) {
 function invoiceDocHtml(inv) {
   const missing = invSettingsIncomplete();
   const paid = invPaid(inv), bal = invBalance(inv);
-  const rows = invoiceLines(inv).map((l => `<tr>\n      <td>${l.desc}${l.detail ? '<div style="font-size:9pt;color:#555">' + l.detail + "</div>" : ""}</td>\n      <td class="num">${(+l.qty).toLocaleString("en-US")}</td>\n      <td class="num">${M(l.price)}</td><td class="num">${M(l.total)}</td></tr>`)).join("");
+  const rows = invoiceLines(inv).map((l => `<tr>\n      <td>${esc(l.desc)}${l.detail ? '<div style="font-size:9pt;color:#555">' + esc(l.detail) + "</div>" : ""}</td>\n      <td class="num">${(+l.qty).toLocaleString("en-US")}</td>\n      <td class="num">${M(l.price)}</td><td class="num">${M(l.total)}</td></tr>`)).join("");
   const overdue = inv.sent && bal > 0 && daysOverdue(inv) > 0;
-  return (missing.length ? `<div class="docstop">\n      <b>DO NOT SEND THIS INVOICE.</b><br>\n      ${missing.join("; ")}. This document is incomplete and must not go to a customer.\n      Fill in the invoice details in the system first.</div>` : "") + docHead("INVOICE", `<b>${inv.invoice_no}</b><br>Issued ${dmy(inv.issued)}<br>\n        Due ${dmy(inv.due)}${overdue ? " <b>(" + daysOverdue(inv) + " days overdue)</b>" : ""}`) + `<div class="docto"><div class="lbl">Invoice to</div>\n        <b>${inv.customer}</b>${inv.site ? "<br>" + inv.site : ""}\n        ${inv.job_no ? '<br><span style="font-size:9.5pt;color:#555">Job ' + inv.job_no + "</span>" : ""}</div>` + `<table><thead><tr><th>Description</th><th class="num">Qty</th>\n        <th class="num">Each</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>` + `<div class="doctot">\n        <div><span>Subtotal</span><span>${M(inv.subtotal)}</span></div>\n        ${inv.vat_shown ? `<div><span>VAT @ ${invCfg.vatRate}%</span><span>${M(inv.vat)}</span></div>` : `<div style="font-size:9.5pt;color:#555"><span>VAT</span><span>not applicable</span></div>`}\n        <div class="grand"><span>TOTAL</span><span>${M(inv.total)}</span></div>\n        ${paid > 0 ? `<div><span>Paid to date</span><span>− ${M(paid)}</span></div>\n          <div class="grand"><span>BALANCE DUE</span><span>${M(bal)}</span></div>` : ""}</div>` + `<div class="docpay"><h4>How to pay</h4>\n        ${invCfg.bank ? `${invCfg.bank}<br>${invCfg.accName || ""}<br>\n           Account ${invCfg.accNo || ""}${invCfg.branch ? " · Branch " + invCfg.branch : ""}` : "<b>[ bank details not set ]</b>"}<br>\n        <span style="font-size:9.5pt">Please use <b>${inv.invoice_no}</b> as your reference.\n        Payment due by ${dmy(inv.due)}.</span></div>` + docFoot(invoiceIncludesInstall(inv));
+  return (missing.length ? `<div class="docstop">\n      <b>DO NOT SEND THIS INVOICE.</b><br>\n      ${missing.join("; ")}. This document is incomplete and must not go to a customer.\n      Fill in the invoice details in the system first.</div>` : "") + docHead("INVOICE", `<b>${esc(inv.invoice_no)}</b><br>Issued ${dmy(inv.issued)}<br>\n        Due ${dmy(inv.due)}${overdue ? " <b>(" + daysOverdue(inv) + " days overdue)</b>" : ""}`) + `<div class="docto"><div class="lbl">Invoice to</div>\n        <b>${esc(inv.customer)}</b>${inv.site ? "<br>" + esc(inv.site) : ""}\n        ${inv.job_no ? '<br><span style="font-size:9.5pt;color:#555">Job ' + esc(inv.job_no) + "</span>" : ""}</div>` + `<table><thead><tr><th>Description</th><th class="num">Qty</th>\n        <th class="num">Each</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody></table>` + `<div class="doctot">\n        <div><span>Subtotal</span><span>${M(inv.subtotal)}</span></div>\n        ${inv.vat_shown ? `<div><span>VAT @ ${esc(invCfg.vatRate)}%</span><span>${M(inv.vat)}</span></div>` : `<div style="font-size:9.5pt;color:#555"><span>VAT</span><span>not applicable</span></div>`}\n        <div class="grand"><span>TOTAL</span><span>${M(inv.total)}</span></div>\n        ${paid > 0 ? `<div><span>Paid to date</span><span>− ${M(paid)}</span></div>\n          <div class="grand"><span>BALANCE DUE</span><span>${M(bal)}</span></div>` : ""}</div>` + `<div class="docpay"><h4>How to pay</h4>\n        ${invCfg.bank ? `${esc(invCfg.bank)}<br>${esc(invCfg.accName)}<br>\n           Account ${esc(invCfg.accNo)}${invCfg.branch ? " · Branch " + esc(invCfg.branch) : ""}` : "<b>[ bank details not set ]</b>"}<br>\n        <span style="font-size:9.5pt">Please use <b>${esc(inv.invoice_no)}</b> as your reference.\n        Payment due by ${dmy(inv.due)}.</span></div>` + docFoot(invoiceIncludesInstall(inv));
 }
 
 function printPriceList() {
@@ -2374,24 +2436,9 @@ function printInvoice(i) {
   showDoc(invoiceDocHtml(invoices[i]));
 }
 
-const MARKUP_FLOOR = 30;
-
 function jobQuoted(j) {
   const q = quotes.find((x => x.quote_no === j.quote_no));
   return q ? +q.total : 0;
-}
-
-function jobCost(j) {
-  const q = quotes.find((x => x.quote_no === j.quote_no));
-  if (!q) return 0;
-  const supply = q.lines.reduce(((s, l) => s + (+l.units || 0) * (+l.unit_cost || 0)), 0);
-  return supply + (q.install && +q.install.cost || 0);
-}
-
-function jobMarkup(j) {
-  const c = jobCost(j);
-  if (!c) return null;
-  return (jobValue(j) - c) / c * 100;
 }
 
 function parseMoney(v) {
@@ -2411,23 +2458,8 @@ function setJobPrice(i, v) {
 }
 
 function priceLine(i, j) {
-  const quoted = jobQuoted(j), now = jobValue(j), cost = jobCost(j);
-  const mk = jobMarkup(j), diff = now - quoted;
-  let verdict, tone;
-  if (mk === null) {
-    verdict = "No cost on the quote to compare against.";
-    tone = "a-ok";
-  } else if (now <= cost) {
-    tone = "a-warn";
-    verdict = `<b>This is at or below what the job costs you to do (${M(cost)}).</b> ` + `You would be paying to work.`;
-  } else if (mk < MARKUP_FLOOR) {
-    tone = "a-warn";
-    verdict = `Mark-up <b>${mk.toFixed(1)}%</b> — below your ${MARKUP_FLOOR}% floor. ` + `Costs you ${M(cost)}, leaves ${M(now - cost)}.`;
-  } else {
-    tone = "a-ok";
-    verdict = `Mark-up <b>${mk.toFixed(1)}%</b> · costs ${M(cost)}, leaves <b>${M(now - cost)}</b>.`;
-  }
-  return `<div class="alert ${SHOW_INTERNAL_COSTS ? tone : "a-ok"}" style="margin:0">\n      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:7px">\n        <div style="flex:1;min-width:150px"><label>Price for this job (M)</label>\n          <input type="text" inputmode="decimal" value="${now.toFixed(2)}"\n                 onchange="setJobPrice(${i}, this.value)"></div>\n        <div class="mini">\n          Quoted ${M(quoted)}${Math.abs(diff) > .005 ? ` · <b>${diff > 0 ? "up" : "down"} ${M(Math.abs(diff))}</b>` : " · unchanged"}\n          ${j.price_override != null ? ` · <a href="#" onclick="setJobPrice(${i},''); return false;">back to quoted</a>` : ""}</div>\n      </div>\n      ${ic(verdict)}</div>`;
+  const quoted = jobQuoted(j), now = jobValue(j), diff = now - quoted;
+  return `<div class="alert a-ok" style="margin:0">\n      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:7px">\n        <div style="flex:1;min-width:150px"><label>Price for this job (M)</label>\n          <input type="text" inputmode="decimal" value="${now.toFixed(2)}"\n                 onchange="setJobPrice(${i}, this.value)"></div>\n        <div class="mini">\n          Quoted ${M(quoted)}${Math.abs(diff) > .005 ? ` · <b>${diff > 0 ? "up" : "down"} ${M(Math.abs(diff))}</b>` : " · unchanged"}\n          ${j.price_override != null ? ` · <a href="#" onclick="setJobPrice(${i},''); return false;">back to quoted</a>` : ""}</div>\n      </div></div>`;
 }
 
 function addOverhead() {
@@ -2465,7 +2497,7 @@ function saveSetup(silent) {
   setup.cap = {
     days: +$("cap_days").value || 22,
     batches: +$("cap_batches").value || 1,
-    yield: +$("cap_yield").value || 432
+    yield: +$("cap_yield").value || 0
   };
   setup.recipe = {
     cement: +$("br_cem").value || 0,
