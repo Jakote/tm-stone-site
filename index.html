@@ -322,7 +322,7 @@ calc()</script>
   run();
   function countUp(el) {
     var m = el.textContent.trim().match(/^(\D*)(\d+)(.*)$/);
-    if (!m) return;
+    if (!m || m[1]) return;
     var pre = m[1], end = parseInt(m[2], 10), post = m[3], t0 = null;
     function step(ts) {
       if (!t0) t0 = ts;
