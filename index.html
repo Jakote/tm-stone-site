@@ -128,9 +128,9 @@
       <select id="ptype">
         <option value="SQ200" data-l="2.0">200 × 200 × 50 mm Square</option>
         <option value="SQ100" data-l="0.5">100 × 100 × 50 mm Square</option>
-        <option value="INT200" data-l="1.0">200 × 100 × 50 mm Interlocking</option>
+        <option value="INT200" data-l="1.2">200 × 100 × 60 mm Interlocking</option>
         <option value="HEX240" data-l="1.97">Hexagon 240 × 210 × 50 mm</option>
-        <option value="ARW3D" data-l="1.56">3D Arrow</option>
+        <option value="ARW3D" data-l="1.88">3D Arrow, 60 mm</option>
       </select>
 
       <div class="mini">Prices are for supply from the yard, held at current material rates. Installation, base preparation, edging and transport are quoted per site after a measure-up.</div>
@@ -227,7 +227,7 @@ const WA_NUMBER = "26650659716";
 
 let priced = false;
 
-const WASTAGE = 5;
+const WASTAGE = 2;
 
 function quoteFor(area, code) {
   const sellPer = PRICE[code];
